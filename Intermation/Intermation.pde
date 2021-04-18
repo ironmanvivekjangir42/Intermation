@@ -81,7 +81,7 @@ void setup(){
   
   println("Done Loading");
   
-  String msg = "bird is standing on the banana";
+  String msg = "banana is in the house";
   println(msg);
   if(msg.length()>0){
     try{
@@ -108,7 +108,7 @@ String[] listFileNames(String dir) {
 
 void draw() {
   
-  background(245);
+  background(249);
  
   for(Object obj : objectList){
     int ind = obj.getIndex();
@@ -144,6 +144,7 @@ void processJsonOpenIE(JsonObject openieJsonArray,JsonArray tokenJsonArray){
     String subject = openieJsonArray.get("subject").getAsString();
     String relation = openieJsonArray.get("relation").getAsString();
     
+    //------------------------------------------on------------------------------------------------------
     if(relation.contains("on")){
       int obj = findInd(object);
       int sub = findInd(subject);
@@ -180,7 +181,200 @@ void processJsonOpenIE(JsonObject openieJsonArray,JsonArray tokenJsonArray){
         println("does not exist in the dataset");        
       }
     }
+    //----------------------------------------over--------------------------------------------------------
     
+    if(relation.contains("over")){
+      int obj = findInd(object);
+      int sub = findInd(subject);
+      
+      if(obj!=-1 && sub!=-1){
+        
+        if(ifExist(object) && ifExist(subject)){
+          Object mObject = getObject(object);
+          PVector tempObj = mObject.getLoc();
+          
+          Object mSubject = getObject(subject);
+          
+          float rand = random(50,tempObj.y-10);
+          int objListIndex = objectList.indexOf(mSubject);
+          objectList.remove(objListIndex);
+          objectList.add(new Object(subject,new PVector(tempObj.x,rand),sub));
+        }
+        else if(ifExist(object)){
+          Object mObject = getObject(object);
+          PVector temp = mObject.getLoc();
+          float rand = random(50,temp.y-10);
+          objectList.add(new Object(subject,new PVector(temp.x,rand),sub));
+        }
+        else if(ifExist(subject)){
+          Object mObject = getObject(subject);
+          PVector temp = mObject.getLoc();
+          float rand = random(temp.y+10,450);
+          objectList.add(new Object(object,new PVector(temp.x,rand),obj));
+        }
+        else{
+          float x = random(50,450);
+          float y = random(50,450);
+          
+          float rand = random(50,y-10);
+          objectList.add(new Object(object,new PVector(x,y),obj));
+          objectList.add(new Object(subject,new PVector((x),rand),sub));
+        }
+      }
+      else{
+        println("does not exist in the dataset");        
+      }
+    }
+    //--------------------------------------above------------------------------------------
+    if(relation.contains("above")){
+      int obj = findInd(object);
+      int sub = findInd(subject);
+      
+      if(obj!=-1 && sub!=-1){
+        
+        if(ifExist(object) && ifExist(subject)){
+          Object mObject = getObject(object);
+          PVector tempObj = mObject.getLoc();
+          
+          Object mSubject = getObject(subject);
+          
+          float rand = random(50,tempObj.y-50);
+          int objListIndex = objectList.indexOf(mSubject);
+          objectList.remove(objListIndex);
+          objectList.add(new Object(subject,new PVector(tempObj.x,rand),sub));
+        }
+        else if(ifExist(object)){
+          Object mObject = getObject(object);
+          PVector temp = mObject.getLoc();
+          float rand = random(50,temp.y-50);
+          objectList.add(new Object(subject,new PVector(temp.x,rand),sub));
+        }
+        else if(ifExist(subject)){
+          Object mObject = getObject(subject);
+          PVector temp = mObject.getLoc();
+          float rand = random(temp.y+10,450);
+          objectList.add(new Object(object,new PVector(temp.x,rand),obj));
+        }
+        else{
+          float x = random(50,450);
+          float y = random(50,450);
+          
+          float rand = random(50,y-50);
+          objectList.add(new Object(object,new PVector(x,y),obj));
+          objectList.add(new Object(subject,new PVector((x),rand),sub));
+        }
+      }
+      else{
+        println("does not exist in the dataset");        
+      }
+    }
+    //--------------------------------------against and beside------------------------------------------
+    if(relation.contains("against") || relation.contains("beside") || relation.contains("by")){
+      int obj = findInd(object);
+      int sub = findInd(subject);
+      
+      if(obj!=-1 && sub!=-1){
+        
+        if(ifExist(object) && ifExist(subject)){
+          Object mObject = getObject(object);
+          PVector tempObj = mObject.getLoc();
+          
+          Object mSubject = getObject(subject);
+          
+          int rand = (int)random(0,1);
+          
+          int objListIndex = objectList.indexOf(mSubject);
+          objectList.remove(objListIndex);
+          
+          if(rand ==0){
+            objectList.add(new Object(subject,new PVector(tempObj.x+100,tempObj.y),sub));
+          }
+          else{
+            objectList.add(new Object(subject,new PVector(tempObj.x-100,tempObj.y),sub));
+          }
+          
+        }
+        else if(ifExist(object)){
+          Object mObject = getObject(object);
+          PVector temp = mObject.getLoc();
+          int rand = (int)random(0,1);
+          if(rand ==0){
+            objectList.add(new Object(subject,new PVector(temp.x+100,temp.y),sub));
+          }
+          else{
+            objectList.add(new Object(subject,new PVector(temp.x-100,temp.y),sub));
+          }
+        }
+        else if(ifExist(subject)){
+          Object mObject = getObject(subject);
+          PVector temp = mObject.getLoc();
+
+          int rand = (int)random(0,1);
+          if(rand ==0){
+            objectList.add(new Object(object,new PVector(temp.x+100,temp.y),sub));
+          }
+          else{
+            objectList.add(new Object(object,new PVector(temp.x-100,temp.y),sub));
+          }
+        }
+        else{
+          float x = random(50,450);
+          float y = random(50,450);
+          
+          int rand = (int)random(0,1);
+          objectList.add(new Object(object,new PVector(x,y),obj));
+          if(rand ==0){
+            objectList.add(new Object(subject,new PVector(x+100,y),sub));
+          }
+          else{
+            objectList.add(new Object(subject,new PVector(x-100,y),sub));
+          }
+        }
+      }
+      else{
+        println("does not exist in the dataset");        
+      }
+    }
+    //--------------------------------------in------------------------------------------
+    if(relation.contains("in")){
+      int obj = findInd(object);
+      int sub = findInd(subject);
+      
+      if(obj!=-1 && sub!=-1){
+        
+        if(ifExist(object) && ifExist(subject)){
+          Object mObject = getObject(object);
+          PVector tempObj = mObject.getLoc();
+          
+          Object mSubject = getObject(subject);
+          
+          int objListIndex = objectList.indexOf(mSubject);
+          objectList.remove(objListIndex);
+          objectList.add(new Object(subject,new PVector(tempObj.x,tempObj.y),sub));
+        }
+        else if(ifExist(object)){
+          Object mObject = getObject(object);
+          PVector temp = mObject.getLoc();
+          objectList.add(new Object(subject,new PVector(temp.x,temp.y),sub));
+        }
+        else if(ifExist(subject)){
+          Object mObject = getObject(subject);
+          PVector temp = mObject.getLoc();
+          objectList.add(new Object(object,new PVector(temp.x,temp.y),obj));
+        }
+        else{
+          float x = random(50,450);
+          float y = random(50,450);
+
+          objectList.add(new Object(object,new PVector(x,y),obj));
+          objectList.add(new Object(subject,new PVector(x,y),sub));
+        }
+      }
+      else{
+        println("does not exist in the dataset");        
+      }
+    }
+    //__________________________________________________________________________________
   }
 }
 
@@ -188,6 +382,15 @@ Boolean ifExist(String object){
   for(Object obj : objectList){
     String item = obj.getName();
     if(item.equals(object)){
+      return true;
+    }
+  }
+  return false;
+}
+
+Boolean ifExistInDatabase(String object){
+  for(int i=0; i<345; i++){
+    if(names[i].equals(object+".ndjson")){
       return true;
     }
   }
@@ -251,6 +454,8 @@ void stanfordNLP(String text)throws Exception{
   println(myJsonObject.get("openie").getAsJsonArray());
   println(myJsonObject.get("tokens").getAsJsonArray());
   
-  processJsonOpenIE(myJsonObject.get("openie").getAsJsonArray().get(0).getAsJsonObject(),  myJsonObject.get("tokens").getAsJsonArray());
-  
+  for(JsonElement jsonElement : myJsonObject.get("openie").getAsJsonArray()){
+    //processJsonOpenIE(myJsonObject.get("openie").getAsJsonArray().get(0).getAsJsonObject(),  myJsonObject.get("tokens").getAsJsonArray());
+    processJsonOpenIE(jsonElement.getAsJsonObject(),  myJsonObject.get("tokens").getAsJsonArray());
+  }
 }
