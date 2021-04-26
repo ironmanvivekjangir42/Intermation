@@ -14,6 +14,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.*;
 import cbl.quickdraw.*;
 import java.lang.*;
 import peasy.*;
@@ -199,17 +200,17 @@ void setup(){
   
   println("Done Loading");
   
-  String msg = "bird is on banana";
+  //String msg = "bird is on banana";
   
-  println(msg);
-  if(msg.length()>0){
-    try{
-      stanfordNLP(msg);
-    }
-    catch(Exception e){
-       println("Exception while processing"); 
-    }
-  }
+  //println(msg);
+  //if(msg.length()>0){
+  //  try{
+  //    stanfordNLP(msg);
+  //  }
+  //  catch(Exception e){
+  //     println("Exception while processing"); 
+  //  }
+  //}
 }
 
 
@@ -238,15 +239,29 @@ void draw() {
   
   endShape(CLOSE);
  
-  for(Object obj : objectList){
-    obj.update();
-    int ind = obj.getIndex();
-    PVector loc = obj.getLoc();
+  //for(Object obj : objectList){
+  //  obj.update();
+  //  int ind = obj.getIndex();
+  //  PVector loc = obj.getLoc();
     
-    translate(0,0,loc.y);
-    qd[ind].create(loc.x,loc.z, 100,100);
-    translate(0,0,-loc.y);
+  //  translate(0,0,loc.y);
+  //  qd[ind].create(loc.x,loc.z, 100,100);
+  //  translate(0,0,-loc.y);
     
+  //}
+  
+  Iterator<Object> iter = objectList.iterator();
+
+  while (iter.hasNext()) {
+      Object obj = iter.next();
+  
+      obj.update();
+      int ind = obj.getIndex();
+      PVector loc = obj.getLoc();
+      
+      translate(0,0,loc.y);
+      qd[ind].create(loc.x,loc.z, 100,100);
+      translate(0,0,-loc.y);
   }
 }
 
@@ -272,7 +287,7 @@ void webSocketServerEvent(String msg){
 }
 
 int getMotion(String Case){
-  if(Case.equals("to") || Case.equals("towards") || Case.equals("into") || Case.equals("onto") || Case.equals("under")){
+  if(Case.equals("to") || Case.equals("towards") || Case.equals("into") || Case.equals("onto") || Case.equals("under") || Case.equals("behind")){
     return 0;
   }
   else if(Case.equals("away") || Case.equals("from") || Case.equals("off of") || Case.equals("out of") || Case.equals("out") || Case.equals("outside") || Case.equals("outdoors")){
@@ -305,7 +320,7 @@ int getMotion(String Case){
   else if(Case.equals("across") || Case.equals("over") || Case.equals("through") || Case.equals("by")){
     return 10;
   }
-  return 2; 
+  return 3; 
 }
 
 PVector getCaseInfo(String relation){
@@ -551,7 +566,7 @@ void processJsonDependencyTree(JsonArray mJsonArray, JsonArray tokenJsonArray){
 
         Object Object = getObject(object);
         PVector location = Object.getLoc();
-        objectList.add(new Object(subject, PVector.add(location,near) , object, animation, relation, subInd));
+        objectList.add(new Object(subject, mObject.location , object, animation, relation, subInd));
         
         if(location.z>min){min = (int)location.z;}
 
