@@ -1,5 +1,4 @@
 import websockets.*;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -15,29 +14,45 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
-
-
 import cbl.quickdraw.*;
+import java.lang.*;
+import peasy.*;
 
-WebsocketServer socket;
-
-int numberofObject = 345;
-String[] names = new String[345];
-QuickDraw[] qd = new QuickDraw[345];
-float end, x;
 
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class Object{
+  //object defination
   String name;
-  PVector location;
   int ind;
+  //object position
+  PVector location;
+  //object animation
+  String animation;
+  String destination;
+  String Case;
+  
+  int r=0;
+  
+  //constructor to add object at a location
   Object(String name, PVector location, int index){
     this.name = name;
-    this.location = location;
     this.ind = index;
+    this.location = location;
+    this.animation = "";
+    this.destination = "";
   }
+  //constructor to add if animation and destination is known
+  Object(String name, PVector location, String destination,String animation, String Case,int index){
+    this.name = name;
+    this.location = location;
+    this.destination = destination;
+    this.ind = index;
+    this.animation = animation;
+    this.Case = Case;
+  }
+  
   String getName(){
      return this.name; 
   }
@@ -47,17 +62,120 @@ class Object{
   PVector getLoc(){
     return this.location;
   }
+  void update(){
+    for(Object obj: objectList){
+      if(obj.getName().equals(destination)){
+        
+        if(isStatic(animation)){
+          this.location = obj.getLoc();
+        }
+        else{
+          int motionType = getMotion(Case);
+          
+          if(motionType==0){//towards
+            PVector dest = obj.getLoc();
+            PVector tempLoc = PVector.sub(dest,location);
+            tempLoc.x = Integer.signum((int)(tempLoc.x));
+            tempLoc.y = Integer.signum((int)(tempLoc.y));
+          
+            this.location = PVector.add(location,tempLoc);
+          }
+          else if(motionType==1){//away
+            PVector dest = obj.getLoc();
+            PVector tempLoc = PVector.sub(dest,location);
+            tempLoc.x = -Integer.signum((int)(tempLoc.x));
+            tempLoc.y = -Integer.signum((int)(tempLoc.y));
+          
+            this.location = PVector.add(location,tempLoc);
+          }
+          else if(motionType==2){//around
+            
+            PVector dest = obj.getLoc();
+            int radius = 150;
+            int x = (int)(radius*cos(radians(r)));
+            int y = (int)(radius*sin(radians(r)));
+            r=(r+2)%360;
+            this.location = new PVector(dest.x+x, dest.y+y, dest.z);
+ 
+          }
+          else if(motionType==3){//static
+            this.location = obj.getLoc();
+          }
+          else if(motionType==4){//up
+            PVector dest = obj.getLoc();
+            dest.z++;
+            this.location = new PVector(dest.x, dest.y ,dest.z);
+          }
+          else if(motionType==5){//down
+            PVector dest = obj.getLoc();
+            dest.z--;
+            this.location = new PVector(dest.x, dest.y ,dest.z);
+          }
+          else if(motionType==6){//left 
+            PVector dest = obj.getLoc();
+            dest.x--;
+            this.location = new PVector(dest.x, dest.y ,dest.z);
+          }
+          else if(motionType==7){//right
+            PVector dest = obj.getLoc();
+            dest.x++;
+            this.location = new PVector(dest.x, dest.y ,dest.z);
+          }
+          else if(motionType==8){//front
+            PVector dest = obj.getLoc();
+            dest.y++;
+            this.location = new PVector(dest.x, dest.y ,dest.z);
+          }
+          else if(motionType==9){//back
+            PVector dest = obj.getLoc();
+            dest.y--;
+            this.location = new PVector(dest.x, dest.y ,dest.z);
+          }
+          else if(motionType==10){//along
+            PVector dest = obj.getLoc();
+            dest.mult(2);
+            PVector tempLoc = PVector.sub(dest,location);
+            tempLoc.x = Integer.signum((int)(tempLoc.x));
+            tempLoc.y = Integer.signum((int)(tempLoc.y));
+          
+            this.location = PVector.add(location,tempLoc);
+          }
+          else{//random motion
+            PVector dest = new PVector(random(-500,500), random(-500,500), 0);
+            PVector tempLoc = PVector.sub(dest,location);
+            tempLoc.x = Integer.signum((int)(tempLoc.x));
+            tempLoc.y = Integer.signum((int)(tempLoc.y));
+          
+            this.location = PVector.add(location,tempLoc);
+          }
+        }
+      }
+    }
+  }
 }
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+WebsocketServer socket;
 
+int numberofObject = 345;
+String[] names = new String[345];
+QuickDraw[] qd = new QuickDraw[345];
+float end, x;
+PeasyCam cam;
+CameraState state;
+int min = 0;
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ArrayList<Object> objectList = new ArrayList();
 
+
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 void setup(){
-  size(500,500,P2D);
+  size(1000,1000,P3D);
+  cam = new PeasyCam(this,2000);
+  state = cam.getState();
+  
   socket = new WebsocketServer(this, 1337, "/p5websocket");
   
   println("setup function");
@@ -81,7 +199,8 @@ void setup(){
   
   println("Done Loading");
   
-  String msg = "banana is in the house";
+  String msg = "bird is on banana";
+  
   println(msg);
   if(msg.length()>0){
     try{
@@ -108,17 +227,35 @@ String[] listFileNames(String dir) {
 
 void draw() {
   
-  background(249);
+  background(230);
+  
+  fill(255);
+  beginShape();
+  vertex(1000, min+75, 1000);
+  vertex(1000, min+75, -1000);
+  vertex(-1000, min+75, -1000);
+  vertex(-1000, min+75, 1000);
+  
+  endShape(CLOSE);
  
   for(Object obj : objectList){
+    obj.update();
     int ind = obj.getIndex();
     PVector loc = obj.getLoc();
-    qd[ind].create(loc.x,loc.y, 100,100);
+    
+    translate(0,0,loc.y);
+    qd[ind].create(loc.x,loc.z, 100,100);
+    translate(0,0,-loc.y);
     
   }
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+public void keyReleased() {
+  if (key == '1') state = cam.getState();
+  if (key == '2') cam.setState(state, 1000);
+}
 
 void webSocketServerEvent(String msg){
   //println("abcd");
@@ -126,6 +263,7 @@ void webSocketServerEvent(String msg){
   if(msg.length()>0){
     try{
       stanfordNLP(msg);
+      
     }
     catch(Exception e){
        println("Exception while processing"); 
@@ -133,249 +271,116 @@ void webSocketServerEvent(String msg){
   }
 }
 
-//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-void processJsonOpenIE(JsonObject openieJsonArray,JsonArray tokenJsonArray){
-  if(openieJsonArray.size()==0){
-     println("cound not understand object relation");
+int getMotion(String Case){
+  if(Case.equals("to") || Case.equals("towards") || Case.equals("into") || Case.equals("onto") || Case.equals("under")){
+    return 0;
   }
-  else{
-    String object = openieJsonArray.get("object").getAsString();
-    String subject = openieJsonArray.get("subject").getAsString();
-    String relation = openieJsonArray.get("relation").getAsString();
-    
-    //------------------------------------------on------------------------------------------------------
-    if(relation.contains("on")){
-      int obj = findInd(object);
-      int sub = findInd(subject);
-      
-      if(obj!=-1 && sub!=-1){
-        if(ifExist(object) && ifExist(subject)){
-          Object mObject = getObject(object);
-          PVector tempObj = mObject.getLoc();
-          
-          Object mSubject = getObject(subject);
-
-          int objListIndex = objectList.indexOf(mSubject);
-          objectList.remove(objListIndex);
-          objectList.add(new Object(subject,new PVector(tempObj.x,(tempObj.y)-50),sub));
-        }
-        else if(ifExist(object)){
-          Object mObject = getObject(object);
-          PVector temp = mObject.getLoc();
-          objectList.add(new Object(subject,new PVector(temp.x,temp.y-50),sub));
-        }
-        else if(ifExist(subject)){
-          Object mObject = getObject(subject);
-          PVector temp = mObject.getLoc();
-          objectList.add(new Object(object,new PVector(temp.x,temp.y+50),obj));
-        }
-        else{
-          float x = random(50,450);
-          float y = random(50,450);
-          objectList.add(new Object(object,new PVector(x,y),obj));
-          objectList.add(new Object(subject,new PVector((x),(y)-50),sub));
-        }
-      }
-      else{
-        println("does not exist in the dataset");        
-      }
-    }
-    //----------------------------------------over--------------------------------------------------------
-    
-    if(relation.contains("over")){
-      int obj = findInd(object);
-      int sub = findInd(subject);
-      
-      if(obj!=-1 && sub!=-1){
-        
-        if(ifExist(object) && ifExist(subject)){
-          Object mObject = getObject(object);
-          PVector tempObj = mObject.getLoc();
-          
-          Object mSubject = getObject(subject);
-          
-          float rand = random(50,tempObj.y-10);
-          int objListIndex = objectList.indexOf(mSubject);
-          objectList.remove(objListIndex);
-          objectList.add(new Object(subject,new PVector(tempObj.x,rand),sub));
-        }
-        else if(ifExist(object)){
-          Object mObject = getObject(object);
-          PVector temp = mObject.getLoc();
-          float rand = random(50,temp.y-10);
-          objectList.add(new Object(subject,new PVector(temp.x,rand),sub));
-        }
-        else if(ifExist(subject)){
-          Object mObject = getObject(subject);
-          PVector temp = mObject.getLoc();
-          float rand = random(temp.y+10,450);
-          objectList.add(new Object(object,new PVector(temp.x,rand),obj));
-        }
-        else{
-          float x = random(50,450);
-          float y = random(50,450);
-          
-          float rand = random(50,y-10);
-          objectList.add(new Object(object,new PVector(x,y),obj));
-          objectList.add(new Object(subject,new PVector((x),rand),sub));
-        }
-      }
-      else{
-        println("does not exist in the dataset");        
-      }
-    }
-    //--------------------------------------above------------------------------------------
-    if(relation.contains("above")){
-      int obj = findInd(object);
-      int sub = findInd(subject);
-      
-      if(obj!=-1 && sub!=-1){
-        
-        if(ifExist(object) && ifExist(subject)){
-          Object mObject = getObject(object);
-          PVector tempObj = mObject.getLoc();
-          
-          Object mSubject = getObject(subject);
-          
-          float rand = random(50,tempObj.y-50);
-          int objListIndex = objectList.indexOf(mSubject);
-          objectList.remove(objListIndex);
-          objectList.add(new Object(subject,new PVector(tempObj.x,rand),sub));
-        }
-        else if(ifExist(object)){
-          Object mObject = getObject(object);
-          PVector temp = mObject.getLoc();
-          float rand = random(50,temp.y-50);
-          objectList.add(new Object(subject,new PVector(temp.x,rand),sub));
-        }
-        else if(ifExist(subject)){
-          Object mObject = getObject(subject);
-          PVector temp = mObject.getLoc();
-          float rand = random(temp.y+10,450);
-          objectList.add(new Object(object,new PVector(temp.x,rand),obj));
-        }
-        else{
-          float x = random(50,450);
-          float y = random(50,450);
-          
-          float rand = random(50,y-50);
-          objectList.add(new Object(object,new PVector(x,y),obj));
-          objectList.add(new Object(subject,new PVector((x),rand),sub));
-        }
-      }
-      else{
-        println("does not exist in the dataset");        
-      }
-    }
-    //--------------------------------------against and beside------------------------------------------
-    if(relation.contains("against") || relation.contains("beside") || relation.contains("by")){
-      int obj = findInd(object);
-      int sub = findInd(subject);
-      
-      if(obj!=-1 && sub!=-1){
-        
-        if(ifExist(object) && ifExist(subject)){
-          Object mObject = getObject(object);
-          PVector tempObj = mObject.getLoc();
-          
-          Object mSubject = getObject(subject);
-          
-          int rand = (int)random(0,1);
-          
-          int objListIndex = objectList.indexOf(mSubject);
-          objectList.remove(objListIndex);
-          
-          if(rand ==0){
-            objectList.add(new Object(subject,new PVector(tempObj.x+100,tempObj.y),sub));
-          }
-          else{
-            objectList.add(new Object(subject,new PVector(tempObj.x-100,tempObj.y),sub));
-          }
-          
-        }
-        else if(ifExist(object)){
-          Object mObject = getObject(object);
-          PVector temp = mObject.getLoc();
-          int rand = (int)random(0,1);
-          if(rand ==0){
-            objectList.add(new Object(subject,new PVector(temp.x+100,temp.y),sub));
-          }
-          else{
-            objectList.add(new Object(subject,new PVector(temp.x-100,temp.y),sub));
-          }
-        }
-        else if(ifExist(subject)){
-          Object mObject = getObject(subject);
-          PVector temp = mObject.getLoc();
-
-          int rand = (int)random(0,1);
-          if(rand ==0){
-            objectList.add(new Object(object,new PVector(temp.x+100,temp.y),sub));
-          }
-          else{
-            objectList.add(new Object(object,new PVector(temp.x-100,temp.y),sub));
-          }
-        }
-        else{
-          float x = random(50,450);
-          float y = random(50,450);
-          
-          int rand = (int)random(0,1);
-          objectList.add(new Object(object,new PVector(x,y),obj));
-          if(rand ==0){
-            objectList.add(new Object(subject,new PVector(x+100,y),sub));
-          }
-          else{
-            objectList.add(new Object(subject,new PVector(x-100,y),sub));
-          }
-        }
-      }
-      else{
-        println("does not exist in the dataset");        
-      }
-    }
-    //--------------------------------------in------------------------------------------
-    if(relation.contains("in")){
-      int obj = findInd(object);
-      int sub = findInd(subject);
-      
-      if(obj!=-1 && sub!=-1){
-        
-        if(ifExist(object) && ifExist(subject)){
-          Object mObject = getObject(object);
-          PVector tempObj = mObject.getLoc();
-          
-          Object mSubject = getObject(subject);
-          
-          int objListIndex = objectList.indexOf(mSubject);
-          objectList.remove(objListIndex);
-          objectList.add(new Object(subject,new PVector(tempObj.x,tempObj.y),sub));
-        }
-        else if(ifExist(object)){
-          Object mObject = getObject(object);
-          PVector temp = mObject.getLoc();
-          objectList.add(new Object(subject,new PVector(temp.x,temp.y),sub));
-        }
-        else if(ifExist(subject)){
-          Object mObject = getObject(subject);
-          PVector temp = mObject.getLoc();
-          objectList.add(new Object(object,new PVector(temp.x,temp.y),obj));
-        }
-        else{
-          float x = random(50,450);
-          float y = random(50,450);
-
-          objectList.add(new Object(object,new PVector(x,y),obj));
-          objectList.add(new Object(subject,new PVector(x,y),sub));
-        }
-      }
-      else{
-        println("does not exist in the dataset");        
-      }
-    }
-    //__________________________________________________________________________________
+  else if(Case.equals("away") || Case.equals("from") || Case.equals("off of") || Case.equals("out of") || Case.equals("out") || Case.equals("outside") || Case.equals("outdoors")){
+    return 1;
   }
+  else if(Case.equals("around") || Case.equals("round") || Case.equals("revolve")){
+    return 2;
+  }
+  else if(Case.equals("against")){
+    return 3;
+  }
+  else if(Case.equals("up") || Case.equals("uphill") || Case.equals("upwards")){
+    return 4;
+  }
+  else if(Case.equals("down") || Case.equals("downwards")){
+    return 5;
+  }
+  else if(Case.equals("left")){
+    return 6;
+  }
+  else if(Case.equals("right")){
+    return 7;
+  }
+  else if(Case.equals("front") || Case.equals("forward")){
+    return 8;
+  }
+  else if(Case.equals("back") || Case.equals("backwardsd")){
+    return 9;
+  }
+  else if(Case.equals("across") || Case.equals("over") || Case.equals("through") || Case.equals("by")){
+    return 10;
+  }
+  return 2; 
+}
+
+PVector getCaseInfo(String relation){
+  PVector pos = new PVector(0,0,0);
+  if(relation.equals("on")){
+    pos.z = -75;
+  }
+  else if(relation.equals("above")){
+    pos.z = -random(110,300);
+  }
+  else if(relation.equals("over")){
+    pos.z = -random(75,250);
+  }
+  else if(relation.equals("against") || relation.equals("beside") || relation.equals("by")){
+    int rand = (int)random(0,1);
+    if(rand==1){
+      pos.x = 100;
+    }
+    else{
+      pos.x = -100;
+    }
+  }
+  else if(relation.equals("behind")){
+    pos.y = -100;
+  }
+  else if(relation.equals("below")){
+    pos.z = 50;
+  }
+  else if(relation.equals("beneath") || relation.equals("underneath") || relation.equals("under")){
+    pos.z = random(75, 250);
+  }
+  else if(relation.equals("in front of")){
+    pos.y = 100;
+  }
+  else if(relation.equals("inside") || relation.equals("in") || relation.equals("into")){
+    pos = new PVector(0,0,0);
+  }
+  else if(relation.equals("near")){
+    int x = (int)random(-300,300);
+    int y = (int)random(-300,300);
+    pos.x = x;
+    pos.y = y;
+  }
+  else if(relation.equals("next to")){
+    int x = (int)random(-150,150);
+    int y = (int)random(-150,150);
+    pos.x = x;
+    pos.y = y;
+  }
+  return pos;
+}
+
+String getTag(String text, JsonArray tokenJsonArray){
+  for(JsonElement obj: tokenJsonArray){
+     if(obj.getAsJsonObject().get("word").getAsString().equals(text)){
+        return obj.getAsJsonObject().get("pos").getAsString();
+     }
+  }
+  return null;
+}
+String getLemma(String text, JsonArray tokenJsonArray){
+  for(JsonElement obj: tokenJsonArray){
+     if(obj.getAsJsonObject().get("word").getAsString().equals(text)){
+        return obj.getAsJsonObject().get("lemma").getAsString();
+     }
+  }
+  return text;
+}
+
+Boolean isStatic(String animation){
+  String[] motionVerbs = {"walk","run","move", "jump","hop","bounce","drag","fly","revolve","chase","follow"};
+  for(String s: motionVerbs){
+    if(animation.equals(s)){return false;}
+  }
+  return true;
 }
 
 Boolean ifExist(String object){
@@ -456,6 +461,206 @@ void stanfordNLP(String text)throws Exception{
   
   for(JsonElement jsonElement : myJsonObject.get("openie").getAsJsonArray()){
     //processJsonOpenIE(myJsonObject.get("openie").getAsJsonArray().get(0).getAsJsonObject(),  myJsonObject.get("tokens").getAsJsonArray());
-    processJsonOpenIE(jsonElement.getAsJsonObject(),  myJsonObject.get("tokens").getAsJsonArray());
+    //processJsonOpenIE(jsonElement.getAsJsonObject(),  myJsonObject.get("tokens").getAsJsonArray());
+  }
+  processJsonDependencyTree(myJsonObject.get("basicDependencies").getAsJsonArray(), myJsonObject.get("tokens").getAsJsonArray());
+}
+
+void processJsonDependencyTree(JsonArray mJsonArray, JsonArray tokenJsonArray){
+  String nsubj = "";
+  String obj= "";
+  String obl= "";
+  String root= "";
+  String caseIn= "";
+  String acl= "";
+  String conj= "";
+  
+  for( JsonElement object: mJsonArray){
+    if(object.getAsJsonObject().get("dep").getAsString().equals("nsubj")){
+        nsubj= object.getAsJsonObject().get("dependentGloss").getAsString();
+    }
+    if(object.getAsJsonObject().get("dep").getAsString().equals("obj")){
+        obj= object.getAsJsonObject().get("dependentGloss").getAsString();
+    }
+    if(object.getAsJsonObject().get("dep").getAsString().equals("obl")){
+        obl= object.getAsJsonObject().get("dependentGloss").getAsString();
+    }
+    if(object.getAsJsonObject().get("dep").getAsString().equals("ROOT")){
+        root= object.getAsJsonObject().get("dependentGloss").getAsString();
+    }
+    if(object.getAsJsonObject().get("dep").getAsString().equals("case")){
+        caseIn = object.getAsJsonObject().get("dependentGloss").getAsString();
+    }
+    if(object.getAsJsonObject().get("dep").getAsString().equals("acl")){
+        acl = object.getAsJsonObject().get("dependentGloss").getAsString();
+    }
+    if(object.getAsJsonObject().get("dep").getAsString().equals("conj")){
+        conj= object.getAsJsonObject().get("dependentGloss").getAsString();
+    }
+  }
+  
+  String subject = "";
+  String object = "";
+  String relation = caseIn;
+  String animation = "";
+  
+  //process object
+  if(!obj.equals("") && getTag(obj, tokenJsonArray).equals("NN")){ 
+    object = getLemma(obj,tokenJsonArray); 
+  }
+  else if(!obl.equals("") && getTag(obl, tokenJsonArray).equals("NN")){ 
+    object = getLemma(obl,tokenJsonArray); 
+  }
+  else if(!root.equals("") && getTag(root, tokenJsonArray).equals("NN")){ 
+    object = getLemma(root,tokenJsonArray); 
+    root = "";
+  }
+  
+  //process subject
+  if(!nsubj.equals("") && getTag(nsubj, tokenJsonArray).equals("NN")){ 
+    subject = getLemma(nsubj,tokenJsonArray); 
+  }
+  else if(!root.equals("") && getTag(root, tokenJsonArray).equals("NN")){ 
+    subject = getLemma(root,tokenJsonArray); 
+    root = "";
+  }
+  
+  //process animation
+  if(!acl.equals("") && getTag(acl, tokenJsonArray).equals("VBG")){ 
+    animation = getLemma(acl,tokenJsonArray); 
+  }
+  else if(!root.equals("") && getTag(root, tokenJsonArray).equals("VBG")){ 
+    animation = getLemma(root,tokenJsonArray);
+    root = "";
+  }
+  
+  println("subject "+subject+"\nobject "+object+"\nrelation "+relation+"\nanimation "+animation);
+
+  PVector offset = getCaseInfo(relation);
+  PVector near = getCaseInfo("near");
+
+  if(!animation.equals("")){
+    // add object with animation
+    int objInd = findInd(object);
+    int subInd = findInd(subject);
+
+      if(ifExist(object) && ifExist(subject)){
+        Object mObject = getObject(subject);
+        int objListIndex = objectList.indexOf(mObject);
+        objectList.remove(objListIndex);
+
+        Object Object = getObject(object);
+        PVector location = Object.getLoc();
+        objectList.add(new Object(subject, PVector.add(location,near) , object, animation, relation, subInd));
+        
+        if(location.z>min){min = (int)location.z;}
+
+      }
+      else if(ifExist(subject)){
+        Object mObject = getObject(subject);
+        int objListIndex = objectList.indexOf(mObject);
+        objectList.remove(objListIndex);
+
+        PVector location = new PVector((int)random(-500,500),(int)random(-500,500),0);
+        if(location.z>min){min = (int)location.z;}
+        if(objInd!=-1){
+          objectList.add(new Object(object, location, objInd));
+        }
+        else{
+          println(object+" does not exist in database");
+        }
+        objectList.add(new Object(subject, PVector.add(location,near) , object, animation, relation,subInd));
+      }
+      else if(ifExist(object)){
+        Object mObject = getObject(object);
+        PVector location = mObject.getLoc();
+        if(location.z>min){min = (int)location.z;}
+        if(subInd!=-1){
+          objectList.add(new Object(subject, PVector.add(location,near) , object, animation, relation,subInd));
+        }
+        else{
+          println(subject+" does not exist in database");
+        }
+      }
+      else{
+        PVector location = new PVector((int)random(-500,500),(int)random(-500,500),0);
+        if(location.z>min){min = (int)location.z;}
+        if(objInd!=-1){
+          objectList.add(new Object(object, location, objInd));
+        }
+        else{
+          println(object+" does not exist in database");
+        }
+        
+        if(subInd!=-1){
+          objectList.add(new Object(subject, PVector.add(location,near) , object, animation, relation,subInd));
+        }else{
+          println(subject+" does not exist in database");
+        }
+      }
+  }
+  else{
+    //add object without animation
+    int objInd = findInd(object);
+    int subInd = findInd(subject);
+
+      if(ifExist(object) && ifExist(subject)){
+        Object mObject = getObject(subject);
+        int objListIndex = objectList.indexOf(mObject);
+        objectList.remove(objListIndex);
+
+        Object Object = getObject(object);
+        PVector location = Object.getLoc();
+        objectList.add(new Object(subject, PVector.add(location,offset), subInd));
+        if(location.z>min){min = (int)location.z;}
+        if(PVector.add(location,offset).z>min){min = (int)PVector.add(location,offset).z;}
+
+      }
+      else if(ifExist(subject)){
+        Object mObject = getObject(subject);
+        int objListIndex = objectList.indexOf(mObject);
+        objectList.remove(objListIndex);
+
+        PVector location = new PVector((int)random(-500,500),(int)random(-500,500),0);
+        if(objInd!=-1){
+          objectList.add(new Object(object, location, objInd));
+        }
+        else{
+          println(object+" does not exist in database");
+        }
+        objectList.add(new Object(subject, PVector.add(location,offset), subInd));
+        if(location.z>min){min = (int)location.z;}
+        if(PVector.add(location,offset).z>min){min = (int)PVector.add(location,offset).z;}
+      }
+      else if(ifExist(object)){
+        Object mObject = getObject(object);
+        PVector location = mObject.getLoc();
+        if(subInd!=-1){
+          objectList.add(new Object(subject, PVector.add(location,offset), subInd));
+        }
+        else{
+          println(subject+" does not exist in database");
+        }
+        if(location.z>min){min = (int)location.z;}
+        if(PVector.add(location,offset).z>min){min = (int)PVector.add(location,offset).z;}
+      }
+      else{
+        PVector location = new PVector((int)random(-500,500),(int)random(-500,500),0);
+        if(objInd!=-1){
+          objectList.add(new Object(object, location, objInd));
+        }
+        else{
+          println(object+" does not exist in database");
+        }
+        
+        if(subInd!=-1){
+          objectList.add(new Object(subject, PVector.add(location,offset), subInd));
+        }
+        else{
+          println(subject+" does not exist in database");
+        }
+        if(location.z>min){min = (int)location.z;}
+        if(PVector.add(location,offset).z>min){min = (int)PVector.add(location,offset).z;}
+      }
   }
 }
